@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Artists </title>
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="container" style="margin: 0px  420px auto; width: 1200px;">
+    <div class="row">
+      <div class="col-sm-6">
+        <h2 style="text-align:center;">Musify - Artist Configuration</h2>
+      </div>
+<a href="home.html"> <button class="btn btn-primary" style="margin-top: 20px; align:right;"> Back </button> </a>
+    </div>
+ 
+  <input type="hidden" id="artist_id" value="0" />
+
+ <div class="row">
+  <div class="col-sm-6">
+    <table id="artistTable" class="table table-bordered table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Edit</th>
+          <th>Artist Name</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+ </div>
+
+<div class="row">
+  <div class="col-sm-6">
+    <button type="button" id="addButton"
+            class="btn btn-primary"
+            onclick="addClick();" style="margin-left:240px;">
+      Add Artist
+    </button>
+  </div>
+</div>
+
+<br>
+
+<div class="row">
+  <div class="col-sm-6">
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        Artist Details
+      </div>
+ <form name='registration' onSubmit="return formValidation();">
+      <div class="panel-body">
+
+          <div class="form-group">
+            <label for="artistname">Artist Name</label>
+            <input type="text" id="artistname" name="artistname" class="form-control" placeholder="Enter Artist Name" onfocus="this.placeholder = ''" onblur="this.placeholder ='Enter Artist Name'"/>
+          </div>
+
+          <div class="panel-footer">
+              <div class="row">
+                  <div class="col-xs-12">
+                      <button type="button" id="updateButton" class="btn btn-primary" onclick="formvalidation();" style="margin-left:220px;">
+                          Add
+                      </button>
+                  </div>
+              </div>
+          </div>
+	 </form> <!--End of Form -->
+   </div>
+  </div>
+</div>
+</div>
+
+<script>
+  // Handle click event on Update button
+
+  var Artist = {
+    artist_name: ""
+  }
+
+  function updateClick() {
+    // Create an artist object
+    Artist = new Object();
+    Artist.artist_id = $("#artist_id").val();
+    Artist.artist_name = $("#artistname").val();
+    if ($("#updateButton").text().trim() == "Add") {
+      artistAdd(Artist);
+    }
+    else {
+      artistUpdate(Artist);
+    }
+
+  }
+
+  function artistUpdate(artist) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/artists/" + artist.artist_id,
+      type: 'PUT',
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify(artist),
+      success: function (response) {
+        artistUpdateSuccess(response.artist);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function artistUpdateSuccess(artist) {
+    artistUpdateInTable(artist);
+  }
+
+  function artistUpdateInTable(artist) {
+    // Find User in <table>
+    var row = $("#artistTable button[data-id='" + artist.artist_id + "']").parents("tr")[0];
+    // Add changed artist to table
+    $(row).after(artistBuildTableRow(artist));
+    // Remove original artist
+    $(row).remove();
+    formClear(); // Clear form fields
+    // Change Update Button Text
+    $("#updateButton").text("Add");
+  }
+
+  function artistAdd(artist) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/artists",
+      type: 'POST',
+      contentType:"application/json;charset=utf-8",
+      data: JSON.stringify(artist),
+      success: function (response) {
+        artistAddSuccess(response.artist);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function artistAddSuccess(artist) {
+    artistAddRow(artist);
+    formClear();
+  }
+
+  function formClear() {
+    $("#artistname").val("");
+  }
+  function addClick() {
+    formClear();
+  }
+
+  function artistListSuccess(artists) {
+    // Iterate over the collection of data
+    $.each(artists, function (index, artist) {
+      // Add a row to the Product table
+      artistAddRow(artist);
+    });
+  }
+
+  function artistAddRow(artist) {
+    // Check if <tbody> tag exists, add one if not
+    if ($("#artistTable tbody").length == 0) {
+      $("#artistTable").append("<tbody></tbody>");
+    }
+    // Append row to <table>
+    $("#artistTable tbody").append(artistBuildTableRow(artist));
+  }
+
+  function artistBuildTableRow(artist) {
+    console.log(artist);
+    var ret =
+      "<tr>" +
+
+      "<td>" +
+        "<button type='button' " +
+        "onclick='artistGet(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + artist.artist_id + "'>" +
+        "<span class='glyphicon glyphicon-edit' />" +
+        "</button>" + "</td >" +
+      "<td>" + artist.artist_name + "</td>" +
+      "<td>" +
+        "<button type='button' " +
+        "onclick='artistDelete(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + artist.artist_id + "'>" +
+        "<span class='glyphicon glyphicon-remove' />" +
+        "</button>" +
+       "</td>" +
+
+      "</tr>";
+
+    return ret;
+  }
+
+  function artistDelete(ctl) {
+    var id = $(ctl).data("id");
+    $.ajax({
+      url: "http://localhost:9001/api/v1/artists/" + id,
+      type: 'DELETE',
+      success: function (response) {
+        $(ctl).parents("tr").remove();
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function handleException(request, message,
+                         error) {
+    var msg = "";
+    msg += "Code: " + request.status + "\n";
+    msg += "Text: " + request.statusText + "\n";
+    if (request.responseJSON != null) {
+      msg += "Message" +
+      request.responseJSON.Message + "\n";
+    }
+    alert(msg);
+  }
+
+  function artistList() {
+    // Call Web API to get a list of Users
+    $.ajax({
+      url: 'http://localhost:9001/api/v1/artists',
+      type: 'GET',
+      dataType: 'json',
+      crossDomain: true,
+      success: function (response) {
+        artistListSuccess(response.artists);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  $(document).ready(function () {
+    artistList();
+  });
+
+  function artistToFields(artist) {
+    $("#artistname").val(artist.artist_name);
+  }
+
+
+
+  function artistGet(ctl) {
+    // Get artist id from data- attribute
+    var id = $(ctl).data("id");
+
+    // Store artist id in hidden field
+    $("#artist_id").val(id);
+
+    // Call Web API to get the specific artist by id
+    $.ajax({
+      url: "http://localhost:9001/api/v1/artists/" + id,
+      type: 'GET',
+      dataType: 'json',
+      success: function (response) {
+        artistToFields(response.artist);
+
+        // Change Update Button Text
+        $("#updateButton").text("Update");
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+  });
+}
+
+
+function formvalidation()  
+{  
+var anm = document.registration.artistname;  
+if(!usernm_validation(anm))
+	{
+	    return;
+	}
+ updateClick();
+}
+
+function usernm_validation(anm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(anm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Artist Name must have alphabet characters only');  
+	anm.focus();  
+	return false; 
+	}
+	 
+}  
+
+</script>
+
+
+</div>>
+</body>
+</html>

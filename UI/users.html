@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Users </title>
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body onload="document.registration.username.focus();">
+
+  <div class="container" style="margin: 0px  420px auto; width: 1200px;">
+    <div class="row">
+      <div class="col-sm-6">
+        <h2 style="text-align:center;">Musify - User Configuration</h2>
+      </div>
+	<a href="home.html"> <button class="btn btn-primary" style="margin-top: 20px; align:right;"> Back </button> </a>
+    </div>
+
+  <input type="hidden" id="user_id" value="0" />
+
+ <div class="row">
+  <div class="col-sm-6">
+    <table id="userTable" class="table table-bordered table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Edit</th>
+          <th>User Name</th>
+          <th>Email</th>
+          <th>Address</th>
+          <th>Phone</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+ </div>
+
+<div class="row">
+  <div class="col-sm-6">
+    <button type="button" id="addButton"
+            class="btn btn-primary"
+            onclick="addClick();" style="margin-left:250px;">
+      Add User
+    </button>
+  </div>
+</div>
+
+<br>
+
+<div class="row">
+  <div class="col-sm-6">
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        User Details
+      </div>
+      <form name='registration' onSubmit="return formValidation();">
+      <div class="panel-body">
+          <div class="form-group">
+            <label for="username">User Name</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="Johndoe" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Johndoe'"/>
+          </div>
+          <div class="form-group">
+              <label for="email">Email</label>
+              <input type="text" id="email" name="emailid" class="form-control" placeholder="xyz@abc.com" onfocus="this.placeholder = ''" onblur="this.placeholder = 'xyz@abc.com'"/>
+
+          </div>
+          <div class="form-group">
+            <label for="address">Address</label>
+            <input type="text" id="address" name="address" class="form-control" placeholder="House No. Area Name City" onfocus="this.placeholder = ''" onblur="this.placeholder = 'House No. Area Name City'"/>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone</label>
+            <input type="text" id="phone" name="phone" class="form-control" placeholder="53052652622" onfocus="this.placeholder = ''" onblur="this.placeholder = '53052652622'"/>
+          </div>
+      </div>
+      <div class="panel-footer">
+          <div class="row">
+            <div class="col-xs-12">
+              <button type="button" name="submit" value="submit" id="updateButton" class="btn btn-primary" onclick="formvalidation();" style="margin-left:250px;">
+              Add
+              </button>
+            </div>
+          </div>
+      </div>
+    </form> <!--End of Form -->
+   </div>
+  </div>
+</div>
+</div>
+
+<script>
+
+  // Handle click event on Update button
+
+  var User = {
+    user_name: "",
+    email:"",
+    address: "",
+    phone: ""
+  }
+
+  function updateClick() {
+    // Create a user object
+    User = new Object();
+    User.user_id = $("#user_id").val();
+    User.user_name = $("#username").val();
+    User.email = $("#email").val();
+    User.address = $("#address").val();
+    User.phone = $("#phone").val();
+    if ($("#updateButton").text().trim() == "Add") {
+      userAdd(User);
+    }
+    else {
+      userUpdate(User);
+    }
+
+  }
+
+  function userUpdate(user) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/users/" + user.user_id,
+      type: 'PUT',
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify(user),
+      success: function (response) {
+        userUpdateSuccess(response.user);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function userUpdateSuccess(user) {
+    userUpdateInTable(user);
+  }
+
+  function userUpdateInTable(user) {
+    // Find User in <table>
+    var row = $("#userTable button[data-id='" + user.user_id + "']").parents("tr")[0];
+    // Add changed user to table
+    $(row).after(userBuildTableRow(user));
+    // Remove original user
+    $(row).remove();
+    formClear(); // Clear form fields
+    // Change Update Button Text
+    $("#updateButton").text("Add");
+  }
+
+  function userAdd(user) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/users",
+      type: 'POST',
+      contentType:"application/json;charset=utf-8",
+      data: JSON.stringify(user),
+      success: function (response) {
+        userAddSuccess(response.user);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function userAddSuccess(user) {
+    userAddRow(user);
+    formClear();
+  }
+
+  function formClear() {
+    $("#username").val("");
+    $("#email").val("");
+    $("#address").val("");
+    $("#phone").val("");
+  }
+  function addClick() {
+    formClear();
+  }
+
+  function userListSuccess(users) {
+    // Iterate over the collection of data
+    $.each(users, function (index, user) {
+      // Add a row to the Product table
+      userAddRow(user);
+    });
+  }
+
+  function userAddRow(user) {
+    // Check if <tbody> tag exists, add one if not
+    if ($("#userTable tbody").length == 0) {
+      $("#userTable").append("<tbody></tbody>");
+    }
+    // Append row to <table>
+    $("#userTable tbody").append(userBuildTableRow(user));
+  }
+
+  function userBuildTableRow(user) {
+    console.log(user);
+    var ret =
+      "<tr>" +
+
+      "<td>" +
+        "<button type='button' " +
+        "onclick='userGet(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + user.user_id + "'>" +
+        "<span class='glyphicon glyphicon-edit' />" +
+        "</button>" + "</td >" +
+      "<td>" + user.user_name + "</td>" +
+      "<td>" + user.email + "</td>" +
+      "<td>" + user.address + "</td>" +
+      "<td>" + user.phone+ "</td>" +
+      "<td>" +
+        "<button type='button' " +
+        "onclick='userDelete(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + user.user_id + "'>" +
+        "<span class='glyphicon glyphicon-remove' />" +
+        "</button>" +
+       "</td>" +
+
+      "</tr>";
+
+    return ret;
+  }
+
+  function userDelete(ctl) {
+    var id = $(ctl).data("id");
+    $.ajax({
+      url: "http://localhost:9001/api/v1/users/" + id,
+      type: 'DELETE',
+      success: function (response) {
+        $(ctl).parents("tr").remove();
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function handleException(request, message,
+                         error) {
+    var msg = "";
+    msg += "Code: " + request.status + "\n";
+    msg += "Text: " + request.statusText + "\n";
+    if (request.responseJSON != null) {
+      msg += "Message" +
+      request.responseJSON.Message + "\n";
+    }
+    alert(msg);
+  }
+
+  function userList() {
+    // Call Web API to get a list of Users
+    $.ajax({
+      url: 'http://localhost:9001/api/v1/users',
+      type: 'GET',
+      dataType: 'json',
+      crossDomain: true,
+      success: function (response) {
+        userListSuccess(response.users);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  $(document).ready(function () {
+    userList();
+  });
+
+  function userToFields(user) {
+    $("#username").val(user.user_name);
+    $("#email").val(user.email);
+    $("#address").val(user.address);
+    $("#phone").val(user.phone);
+  }
+
+
+
+  function userGet(ctl) {
+    // Get user id from data- attribute
+    var id = $(ctl).data("id");
+
+    // Store user id in hidden field
+    $("#user_id").val(id);
+
+    // Call Web API to get the specific user by id
+    $.ajax({
+      url: "http://localhost:9001/api/v1/users/" + id,
+      type: 'GET',
+      dataType: 'json',
+      success: function (response) {
+        userToFields(response.user);
+
+        // Change Update Button Text
+        $("#updateButton").text("Update");
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+  });
+}
+
+
+function formvalidation()  
+{  
+var unm = document.registration.username;  
+var uem = document.registration.email;
+var uad = document.registration.address;
+var uph = document.registration.phone;
+	if(!usernm_validation(unm))
+	{
+	    return;
+	}
+	if(!validateEmail(uem))
+	{
+	    return;
+	}
+	if(!validateAdd(uad))
+	{
+	    return;
+	}
+	if(!validatePhone(uph))
+	{
+	    return;
+	}
+    //return false;
+    updateClick();
+}	
+
+function usernm_validation(unm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(unm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Username must have alphabet characters only');  
+	unm.focus();  
+	return false; 
+	} 
+}  
+
+function validateEmail(uem)
+{
+	var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;  
+	if(uem.value.match(mailformat))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert("You have entered an invalid email address!");  
+	uem.focus();  
+	return false;  
+	}  
+
+}
+
+function validateAdd(uad)
+{
+	var letters = /^[0-9a-zA-Z]+/;  
+	if(uad.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('User Address must have alphanumeric characters only');  
+	uad.focus();  
+	return false;  
+	}  
+}
+
+	
+function validatePhone(uph)  
+{   
+var numbers = /^[0-9]+/;  
+if(uph.value.match(numbers))  
+{  
+return true;  
+}  
+else  
+{  
+alert('Phone Number must have numeric characters only');  
+uph.focus();  
+return false;  
+}  
+}
+
+
+</script>
+
+
+</body>
+</html>

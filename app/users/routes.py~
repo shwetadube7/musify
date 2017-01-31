@@ -1,0 +1,149 @@
+from flask import Blueprint, jsonify, request
+
+#from app import jsonschema
+from app.provider.router import ProviderRouter
+from app.provider.constants import (
+    HTTP_200_OK,
+    HTTP_201_CREATED,
+    HTTP_404_NOT_FOUND,
+    HTTP_400_CLIENT_ERROR,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+    INTERNAL_SERVER_ERROR,
+    NOT_FOUND,
+    CLIENT_ERROR,
+    CREATED,
+    STATUS,
+    GET,
+    POST,
+    PATCH,
+    DELETE,
+    LIMIT,
+    OFFSET,
+    MESSAGE,
+    MAX_LIMIT,
+    LIST_OPT_PARAMS,
+    SEARCH_OPT_PARAMS
+)
+
+
+EMPTY_SET = frozenset([])
+users = Blueprint('users', __name__, url_prefix='/api')
+
+
+@users.route('/users/<user_id>', methods=[GET])
+def get_provider(user_id):
+    resp = ProviderRouter().route('get', provider_id)
+    return make_response(resp)
+
+
+@provider.route('/providers, methods=[POST])
+#@jsonschema.validate('providers', 'createProvider')
+def create_provider():
+    request_data = request.get_json(force=True)
+    resp = ProviderRouter().route('create', request_data)
+    return make_response(resp)
+
+
+@provider.route('/providers/<provider_id>', methods=[PATCH])
+#@jsonschema.validate('providers', 'updateProvider')
+def update_provider(provider_id):
+    request_data = request.get_json(force=True)
+    resp = ProviderRouter().route('update', provider_id, request_data)
+    return make_response(resp)
+
+
+@provider.route('/providers/<provider_id>', methods=[DELETE])
+def delete_provider(provider_id):
+    resp = ProviderRouter().route('delete', provider_id)
+    return make_response(resp)
+
+
+@provider.route('/providers/', methods=[GET])
+def list_providers():
+    request_data = request.args.to_dict()
+    is_invalid, resp = input_validator(request_data, LIST_OPT_PARAMS)
+    if is_invalid:
+        return resp
+
+    resp = ProviderRouter().route('list', request_data)
+    return make_response(resp)
+
+
+@provider.route('/providers/search', methods=[GET])
+def search_providers():
+    request_data = request.args.to_dict()
+    is_invalid, resp = input_validator(request_data, SEARCH_OPT_PARAMS)
+    if is_invalid:
+        return resp
+
+    resp = ProviderRouter().route('search', request_data)
+    return make_response(resp)
+
+
+# ------------------------------------------------------------------------------
+# Util Functions
+# ------------------------------------------------------------------------------
+def input_validator(request_data, OPT_PARAMS):
+    user_params = set(request_data.keys())
+    bad_params = user_params - OPT_PARAMS
+
+    if not bad_params == EMPTY_SET:
+        return True, make_response(bad_params_client_error(bad_params))
+
+    if not int_validator(request_data.get(LIMIT, 10)):
+        return True, make_response(invalid_type_client_error(LIMIT))
+
+    if not int_validator(request_data.get(OFFSET, 10)):
+        return True, make_response(invalid_type_client_error(OFFSET))
+
+    if int(request_data.get(LIMIT, 10)) > MAX_LIMIT:
+        return True, make_response(limit_exceeded_client_error())
+
+    return False, {}
+
+
+def int_validator(value):
+    try:
+        x = int(value)
+        if x < 0:
+            return False
+    except ValueError:
+        return False
+
+    return True
+
+
+def invalid_type_client_error(param):
+    return {
+        STATUS: CLIENT_ERROR,
+        MESSAGE: 'Parameter [{}] must contain a positive number'.format(param)
+    }
+
+
+def bad_params_client_error(bad_params):
+    return {
+        STATUS: CLIENT_ERROR,
+        MESSAGE: 'Unsuppported parameter(s) found: [{}]'.format(
+            ', '.join(bad_params)
+        )
+    }
+
+
+def limit_exceeded_client_error():
+    return {
+        STATUS: CLIENT_ERROR,
+        MESSAGE: 'Max limit supported: {}'.format(MAX_LIMIT)
+    }
+
+
+def make_response(resp):
+    if resp[STATUS] == INTERNAL_SERVER_ERROR:
+        return jsonify(resp), HTTP_500_INTERNAL_SERVER_ERROR
+    elif resp[STATUS] == NOT_FOUND:
+        return jsonify(resp), HTTP_404_NOT_FOUND
+    elif resp[STATUS] == CLIENT_ERROR:
+        return jsonify(resp), HTTP_400_CLIENT_ERROR
+    elif resp[STATUS] == CREATED:
+        return jsonify(resp), HTTP_201_CREATED
+    else:
+        return jsonify(resp), HTTP_200_OK

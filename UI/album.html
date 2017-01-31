@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Albums </title>
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="container" style="margin: 0px  420px auto; width: 1200px;">
+    <div class="row">
+      <div class="col-sm-6">
+ <h2 style="text-align:center;">Musify - Album Configuration</h2>
+      </div>
+<a href="home.html"> <button class="btn btn-primary" style="margin-top: 20px; align:right;"> Back </button> </a>
+    </div>
+
+
+  <input type="hidden" id="album_id" value="0" />
+
+ <div class="row">
+  <div class="col-sm-6">
+    <table id="albumTable" class="table table-bordered table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Edit</th>
+          <th>Album Name</th>
+          <th>Artist Name</th>
+          <th>View Tracks </th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+ </div>
+
+<div class="row">
+  <div class="col-sm-6">
+    <button type="button" id="addButton"
+            class="btn btn-primary"
+            onclick="addClick();" style="margin-left:240px;">
+      Add Album
+    </button>
+  </div>
+</div>
+
+<br>
+
+<div class="row">
+  <div class="col-sm-6">
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        Album Details
+      </div>
+      <form name='registration' onSubmit="return formValidation();">
+      <div class="panel-body">
+
+          <div class="form-group">
+            <label for="albumname">Album Name</label>
+            <input type="text" id="albumname" name="albumname" class="form-control" placeholder="Enter Album Name" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter Album Name'"/>
+          </div>
+
+          <div class="form-group">
+              <label for="artistid">Artist Name</label>
+              <input type="text" id="artistid" name="artistname" class="form-control" placeholder="Enter Artist Name" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter Artist Name'"/>
+          </div>
+
+          <div class="panel-footer">
+              <div class="row">
+                  <div class="col-xs-12">
+                      <button type="button" id="updateButton" class="btn btn-primary" onclick="formValidation();" style="margin-left:220px;">
+                          Add
+                      </button>
+                  </div>
+              </div>
+          </div>
+	</form> <!--End of Form -->
+   </div>
+  </div>
+</div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="myModal" role="dialog">
+<div class="modal-dialog">
+
+  <!-- Modal content-->
+  <div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal">&times;</button>
+      <h4 class="modal-title">Tracks</h4>
+    </div>
+    <div class="modal-body">
+        <table id="trackTable" class="table table-bordered table-condensed table-striped">
+            <thead>
+            <tr>
+                <th>Track Name</th>
+                <th>Artist Name</th>
+                <th>Genre</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Handle click event on Update button
+
+  $(document).ready(function() {
+    $('.modal').on('hidden.bs.modal', function(e) {
+      $(this).removeData();
+      $("#trackTable tbody").remove();
+    });
+  });
+
+  var Album = {
+    album_name: "",
+    album_id: "",
+    artist_name: ""
+  }
+
+  function updateClick() {
+    // Create an album object
+    Album = new Object();
+    Album.album_id = $("#album_id").val();
+    Album.album_name = $("#albumname").val();
+    Album.artist_name = $("#artistid").val();
+    if ($("#updateButton").text().trim() == "Add") {
+      albumAdd(Album);
+    }
+    else {
+      albumUpdate(Album);
+    }
+  }
+
+  function albumUpdate(album) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/albums/" + album.album_id,
+      type: 'PUT',
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify(album),
+      success: function (response) {
+        albumUpdateSuccess(response.album);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function albumUpdateSuccess(album) {
+    albumUpdateInTable(album);
+  }
+
+  function albumUpdateInTable(album) {
+    // Find User in <table>
+    var row = $("#albumTable button[data-id='" + album.album_id + "']").parents("tr")[0];
+    // Add changed album to table
+    $(row).after(albumBuildTableRow(album));
+    // Remove original album
+    $(row).remove();
+    formClear(); // Clear form fields
+    // Change Update Button Text
+    $("#updateButton").text("Add");
+  }
+
+  function albumAdd(album) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/albums",
+      type: 'POST',
+      contentType:"application/json;charset=utf-8",
+      data: JSON.stringify(album),
+      success: function (response) {
+        albumAddSuccess(response.album);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function albumAddSuccess(album) {
+    albumAddRow(album);
+    formClear();
+  }
+
+  function formClear() {
+    $("#albumname").val("");
+    $("#artistid").val("");
+  }
+  function addClick() {
+    formClear();
+  }
+
+  function albumListSuccess(albums) {
+    // Iterate over the collection of data
+    $.each(albums, function (index, album) {
+      // Add a row to the Product table
+      albumAddRow(album);
+    });
+  }
+
+  function albumAddRow(album) {
+    // Check if <tbody> tag exists, add one if not
+    if ($("#albumTable tbody").length == 0) {
+      $("#albumTable").append("<tbody></tbody>");
+    }
+    // Append row to <table>
+    $("#albumTable tbody").append(albumBuildTableRow(album));
+  }
+
+  function albumBuildTableRow(album) {
+    console.log(album);
+    var ret =
+      "<tr>" +
+
+      "<td>" +
+        "<button type='button' " +
+        "onclick='albumGet(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + album.album_id + "'>" +
+        "<span class='glyphicon glyphicon-edit' />" +
+        "</button>" +
+      "</td >" +
+      "<td>" + album.album_name + "</td>" +
+      "<td>" + album.artist_name + "</td>" +
+      "<td>" +
+        "<button type='button' " +
+        "onclick='getTracks(this);' " +
+        "class='btn btn-default' " +
+        "data-toggle='modal'" +
+        "data-target='#myModal'" +
+        "data-id='" + album.album_id + "'>" +
+        " View Tracks </button>" +
+       "</td>" +
+
+      "<td>" +
+        "<button type='button' " +
+        "onclick='albumDelete(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + album.album_id + "'>" +
+        "<span class='glyphicon glyphicon-remove' />" +
+        "</button>" +
+      "</td>" +
+
+      "</tr>";
+
+    return ret;
+  }
+
+  function getTracks(ctl) {
+    var id = $(ctl).data("id");
+    $.ajax({
+      url: "http://localhost:9001/api/v1/albums/" + id + "/tracks",
+      type: 'GET',
+      success: function (response) {
+        trackListSuccess(response.tracks);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function trackListSuccess(tracks) {
+    // Iterate over the collection of data
+    $.each(tracks, function (index, track) {
+      // Add a row to the Product table
+      trackAddRow(track);
+    });
+  }
+
+  function trackAddRow(track) {
+    // Check if <tbody> tag exists, add one if not
+    if ($("#trackTable tbody").length == 0) {
+      $("#trackTable").append("<tbody></tbody>");
+    }
+    // Append row to <table>
+    $("#trackTable tbody").append(trackBuildTableRow(track));
+  }
+
+  function trackBuildTableRow(track) {
+    console.log(track);
+    var ret =
+      "<tr>" +
+
+      "<td>" + track.track_name + "</td>" +
+      "<td>" + track.artist_name + "</td>" +
+      "<td>" + track.genre+ "</td>" +
+
+      "</tr>";
+
+    return ret;
+  }
+
+  function albumDelete(ctl) {
+    var id = $(ctl).data("id");
+    $.ajax({
+      url: "http://localhost:9001/api/v1/albums/" + id,
+      type: 'DELETE',
+      success: function (response) {
+        $(ctl).parents("tr").remove();
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function handleException(request, message,
+                         error) {
+    var msg = "";
+    msg += "Code: " + request.status + "\n";
+    msg += "Text: " + request.statusText + "\n";
+    if (request.responseJSON != null) {
+      msg += "Message" +
+      request.responseJSON.Message + "\n";
+    }
+    alert(msg);
+  }
+
+  function albumList() {
+    // Call Web API to get a list of Users
+    $.ajax({
+      url: 'http://localhost:9001/api/v1/albums',
+      type: 'GET',
+      dataType: 'json',
+      crossDomain: true,
+      success: function (response) {
+        albumListSuccess(response.albums);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  $(document).ready(function () {
+    albumList();
+  });
+
+  function albumToFields(album) {
+    $("#albumname").val(album.album_name);
+    $("#artistid").val(album.artist_name);
+  }
+
+
+
+  function albumGet(ctl) {
+    // Get album id from data- attribute
+    var id = $(ctl).data("id");
+
+    // Store album id in hidden field
+    $("#album_id").val(id);
+
+    // Call Web API to get the specific album by id
+    $.ajax({
+      url: "http://localhost:9001/api/v1/albums/" + id,
+      type: 'GET',
+      dataType: 'json',
+      success: function (response) {
+        albumToFields(response.album);
+
+        // Change Update Button Text
+        $("#updateButton").text("Update");
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+  });
+}
+
+
+function formValidation()  
+{  
+var abnm = document.registration.albumname; 
+var anm = document.registration.artistid;  
+
+if(!albumnm_validation(abnm))
+	{
+	    return;
+	}
+if(!usernm_validation(anm))
+	{
+	    return;
+	}
+updateClick();
+}
+
+function albumnm_validation(abnm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(abnm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Album must have alphabet characters only');  
+	abnm.focus();  
+	return false; 
+	}
+	 
+}  
+
+function usernm_validation(anm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(anm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Artist name must have alphabet characters only');  
+	anm.focus();  
+	return false; 
+	}
+	 
+}  
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> Tracks </title>
+    <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  
+
+  <div class="container" style="margin: 0px  420px auto; width: 1200px;">
+    <div class="row">
+      <div class="col-sm-6">
+       <h2 style="text-align:center;"> Musify - Track Configuration</h2>
+      </div>
+	<a href="home.html"> <button class="btn btn-primary" style="margin-top: 20px; align:right;"> Back </button> </a>
+  </div>
+
+  <input type="hidden" id="track_id" value="0" />
+  <input type="hidden" id="album_id" value="0" />
+  <input type="hidden" id="artist_id" value="0" />
+
+ <div class="row">
+  <div class="col-sm-6">
+    <table id="trackTable" class="table table-bordered table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Edit</th>
+          <th>Track Name</th>
+          <th>Created At</th>
+          <th>Track Number</th>
+          <th>Album Name</th>
+          <th>Artist Name</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+ </div>
+
+<div class="row">
+  <div class="col-sm-6">
+    <button type="button" id="addButton"
+            class="btn btn-primary"
+            onclick="addClick();" style="margin-left:240px;">
+      Add Album
+    </button>
+  </div>
+</div>
+
+<br>
+
+<div class="row">
+  <div class="col-sm-6">
+    <div class="panel panel-primary">
+      <div class="panel-heading">
+        Track Details
+      </div>
+	<form name='registration' onSubmit="return formValidation();">
+      <div class="panel-body">
+
+          <div class="form-group">
+            <label for="trackname">Track Name</label>
+            <input type="text" id="trackname" name="trackname" class="form-control" placeholder="e.g. Song Name" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'e.g. Song Name'"/>
+          </div>
+          <div class="form-group">
+              <label for="createdat">Created At</label>
+              <input type="text" id="createdat" name="createdat" class="form-control" placeholder="e.g. 25-JUN-1988" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = ' e.g. 25-JUN-1988'"/>
+          </div>
+          <div class="form-group">
+              <label for="tracknum">Track Number</label>
+              <input type="text" id="tracknum" name="tracknum" class="form-control" placeholder="Enter No. here" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter No. here'"/>
+          </div>
+
+          <div class="form-group">
+              <label for="albumname">Album Name</label>
+              <input type="text" id="albumname" name="albumname" class="form-control" placeholder="Enter Valid Album" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter Valid Album '"/>
+          </div>
+
+          <div class="form-group">
+              <label for="artistname">Artist Name</label>
+              <input type="text" id="artistname" name="artistname" class="form-control" placeholder="Enter Valid Artist" 
+		onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter valid Artist'"/>
+          </div>
+
+          <div class="panel-footer">
+              <div class="row">
+                  <div class="col-xs-12">
+                      <button type="button" id="updateButton" class="btn btn-primary" onclick="formValidation();" style="margin-left:220px;">
+                          Add
+                      </button>
+                  </div>
+              </div>
+          </div>
+	</form> <!--End of Form -->
+   </div>
+  </div>
+</div>
+</div>
+
+<script>
+  // Handle click event on Update button
+
+
+  var Track = {
+    track_id: "",
+    album_id: "",
+    artist_id: "",
+    track_name: "",
+    created_at:"",
+    track_num: "",
+    artist_name: "",
+    album_name: ""
+  }
+
+  function updateClick() {
+    // Create an track object
+    Track = new Object();
+    Track.track_id = $("#track_id").val();
+    Track.album_id = $("#album_id").val();
+    Track.artist_id = $("#artist_id").val();
+    Track.track_name = $("#trackname").val();
+    Track.created_at = $("#createdat").val();
+    Track.track_num = $("#tracknum").val();
+    Track.artist_name = $("#artistname").val();
+    Track.album_name = $("#albumname").val();
+    if ($("#updateButton").text().trim() == "Add") {
+      trackAdd(Track);
+    }
+    else {
+      trackUpdate(Track);
+    }
+  }
+
+  function trackUpdate(track) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/tracks/" + track.track_id,
+      type: 'PUT',
+      contentType: "application/json;charset=utf-8",
+      data: JSON.stringify(track),
+      success: function (response) {
+        trackUpdateSuccess(response.track);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function trackUpdateSuccess(track) {
+    trackUpdateInTable(track);
+  }
+
+  function trackUpdateInTable(track) {
+    // Find User in <table>
+    var row = $("#trackTable button[data-id='" + track.track_id + "']").parents("tr")[0];
+    // Add changed track to table
+    $(row).after(trackBuildTableRow(track));
+    // Remove original track
+    $(row).remove();
+    formClear(); // Clear form fields
+    // Change Update Button Text
+    $("#updateButton").text("Add");
+  }
+
+  function trackAdd(track) {
+    $.ajax({
+      url: "http://localhost:9001/api/v1/tracks",
+      type: 'POST',
+      contentType:"application/json;charset=utf-8",
+      data: JSON.stringify(track),
+      success: function (response) {
+        trackAddSuccess(response.track);
+      },
+      error: function (request, message, error) {
+        request.message = "Invalid Artist or Album";
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function trackAddSuccess(track) {
+    trackAddRow(track);
+    formClear();
+  }
+
+  function formClear() {
+    $("#trackname").val("");
+    $("#createdat").val("");
+    $("#tracknum").val("");
+    $("#albumname").val("");
+    $("#artistname").val("");
+  }
+  function addClick() {
+    formClear();
+  }
+
+  function trackListSuccess(tracks) {
+    // Iterate over the collection of data
+    $.each(tracks, function (index, track) {
+      // Add a row to the Product table
+      trackAddRow(track);
+    });
+  }
+
+  function trackAddRow(track) {
+    // Check if <tbody> tag exists, add one if not
+    if ($("#trackTable tbody").length == 0) {
+      $("#trackTable").append("<tbody></tbody>");
+    }
+    // Append row to <table>
+    $("#trackTable tbody").append(trackBuildTableRow(track));
+  }
+
+  function trackBuildTableRow(track) {
+    console.log(track);
+    var ret =
+      "<tr>" +
+
+      "<td>" +
+        "<button type='button' " +
+        "onclick='trackGet(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + track.track_id + "'>" +
+        "<span class='glyphicon glyphicon-edit' />" +
+        "</button>" + "</td >" +
+      "<td>" + track.track_name + "</td>" +
+      "<td>" + track.created_at + "</td>" +
+      "<td>" + track.track_num + "</td>" +
+      "<td>" + track.album_name + "</td>" +
+      "<td>" + track.artist_name + "</td>" +
+      "<td>" +
+        "<button type='button' " +
+        "onclick='trackDelete(this);' " +
+        "class='btn btn-default' " +
+        "data-id='" + track.track_id + "'>" +
+        "<span class='glyphicon glyphicon-remove' />" +
+        "</button>" +
+       "</td>" +
+
+      "</tr>";
+
+    return ret;
+  }
+
+  function trackDelete(ctl) {
+    var id = $(ctl).data("id");
+    $.ajax({
+      url: "http://localhost:9001/api/v1/tracks/" + id,
+      type: 'DELETE',
+      success: function (response) {
+        $(ctl).parents("tr").remove();
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  function handleException(request, message,
+                         error) {
+    var msg = "";
+    msg += "Code: " + request.status + "\n";
+    msg += "Text: " + request.statusText + "\n";
+    msg += "Reason: " + request.message + "\n";
+    console.log(request);
+    console.log(message);
+    console.log(error);
+    if (request.responseJSON != null) {
+      msg += "Message" +
+      request.responseJSON.Message + "\n";
+    }
+    alert(msg);
+  }
+
+  function trackList() {
+    // Call Web API to get a list of Users
+    $.ajax({
+      url: 'http://localhost:9001/api/v1/tracks',
+      type: 'GET',
+      dataType: 'json',
+      crossDomain: true,
+      success: function (response) {
+        trackListSuccess(response.tracks);
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+    });
+  }
+
+  $(document).ready(function () {
+    trackList();
+  });
+
+  function trackToFields(track) {
+    $("#trackname").val(track.track_name);
+    $("#createdat").val(track.created_at);
+    $("#tracknum").val(track.track_num);
+    $("#albumname").val(track.album_name);
+    $("#artistname").val(track.artist_name);
+  }
+
+
+
+  function trackGet(ctl) {
+    // Get track id from data- attribute
+    var id = $(ctl).data("id");
+
+    // Store track id in hidden field
+    $("#track_id").val(id);
+
+    // Call Web API to get the specific track by id
+    $.ajax({
+      url: "http://localhost:9001/api/v1/tracks/" + id,
+      type: 'GET',
+      dataType: 'json',
+      success: function (response) {
+        trackToFields(response.track);
+
+        // Change Update Button Text
+        $("#updateButton").text("Update");
+      },
+      error: function (request, message, error) {
+        handleException(request, message, error);
+      }
+  });
+}
+
+function formValidation()  
+{  
+var abnm = document.registration.albumname; 
+var anm = document.registration.artistname;  
+var tnm = document.registration.trackname;
+
+if(!tracknm_validation(tnm))
+	{
+	    return;
+	}
+
+if(!albumnm_validation(abnm))
+	{
+	    return;
+	}
+if(!usernm_validation(anm))
+	{
+	    return;
+	}
+updateClick();
+}
+
+function tracknm_validation(tnm)
+{
+
+var letters = /^[A-Za-z]+$/;  
+	if(tnm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Track must have alphabet characters only');  
+	tnm.focus();  
+	return false; 
+	}
+}
+
+function albumnm_validation(abnm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(abnm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Album must have alphabet characters only');  
+	abnm.focus();  
+	return false; 
+	}
+	 
+}  
+
+function usernm_validation(anm)  
+{  
+	var letters = /^[A-Za-z]+$/;  
+	if(anm.value.match(letters))  
+	{  
+	return true;  
+	}  
+	else  
+	{  
+	alert('Artist name must have alphabet characters only');  
+	anm.focus();  
+	return false; 
+	}
+	 
+}  
+
+</script>
+
+</body>
+</html>
